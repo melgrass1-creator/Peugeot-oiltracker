@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Peugeot 408 | 油耗智慧分析</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "on-tertiary-container": "#636469",
+          "on-secondary": "#2f3034",
+          "surface-container-high": "#2a2a2a",
+          "surface-variant": "#353535",
+          "on-surface": "#e2e2e2",
+          "background": "#131313",
+          "on-error": "#690005",
+          "on-primary-fixed": "#1a1c1c",
+          "on-tertiary": "#2f3034",
+          "primary": "#ffffff",
+          "on-surface-variant": "#c4c7c8",
+          "surface-container-low": "#1b1b1b",
+          "inverse-on-surface": "#303030",
+          "secondary-container": "#46464b",
+          "on-primary-fixed-variant": "#454747",
+          "surface-container": "#1f1f1f",
+          "on-error-container": "#ffdad6",
+          "error-container": "#93000a",
+          "outline-variant": "#444748",
+          "on-background": "#e2e2e2",
+          "surface-bright": "#393939",
+          "surface-container-highest": "#353535",
+          "surface": "#131313",
+          "inverse-primary": "#5d5f5f",
+          "error": "#ffb4ab",
+          "on-secondary-container": "#b5b4ba",
+          "on-primary": "#2f3131",
+          "surface-container-lowest": "#0e0e0e",
+          "secondary": "#c7c6cb",
+          "outline": "#8e9192",
+          "surface-dim": "#131313"
+        },
+        fontFamily: {
+          "headline": ["Inter", "sans-serif"],
+          "body": ["Inter", "sans-serif"],
+          "label": ["Inter", "sans-serif"]
+        },
+        borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+      },
+    },
+  }
+</script>
+<style>
+  .glass { background: rgba(31,31,31,0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #444748; border-radius: 10px; }
+  /* modal overlay */
+  #modal-overlay { transition: opacity .2s; }
+</style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary">
+
+<!-- Nav -->
+<nav class="fixed top-0 w-full z-50 bg-zinc-950/70 backdrop-blur-xl shadow-2xl shadow-black/50 px-8 h-20 flex justify-between items-center">
+  <div class="flex items-center gap-12">
+    <span class="text-xl font-bold tracking-tighter text-white uppercase">Peugeot 408</span>
+    <div class="hidden md:flex gap-8 items-center">
+      <a class="text-white border-b-2 border-white pb-1 text-sm font-medium tracking-wide" href="#">油耗</a>
+      <a class="text-zinc-500 hover:text-zinc-300 transition-colors text-sm font-medium tracking-wide" href="#">分析</a>
+      <a class="text-zinc-500 hover:text-zinc-300 transition-colors text-sm font-medium tracking-wide" href="#">日誌</a>
+    </div>
+  </div>
+  <div class="flex items-center gap-4">
+    <div class="hidden lg:flex items-center bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant/10">
+      <span class="material-symbols-outlined text-zinc-500 text-sm mr-2">search</span>
+      <input class="bg-transparent border-none text-xs focus:ring-0 text-zinc-300 w-48 p-0" placeholder="搜尋紀錄..." id="searchInput" oninput="renderTable()" type="text"/>
+    </div>
+  </div>
+</nav>
+
+<main class="pt-32 pb-20 px-8 max-w-7xl mx-auto min-h-screen">
+
+  <!-- Hero -->
+  <header class="mb-16">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 mb-2 block">個人車輛智慧分析</span>
+        <h1 class="text-5xl md:text-7xl font-extrabold tracking-tighter text-white leading-tight">油耗效率<span class="text-zinc-600">總覽.</span></h1>
+      </div>
+      <div class="flex gap-4 mb-2">
+        <button onclick="openModal()" class="bg-primary text-on-primary px-6 py-3 rounded-xl font-semibold flex items-center gap-2 hover:opacity-90 transition-all active:scale-95">
+          <span class="material-symbols-outlined text-lg">add</span>新紀錄
+        </button>
+        <button onclick="exportCSV()" class="bg-surface-container text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-surface-container-high transition-all border border-outline-variant/10">
+          <span class="material-symbols-outlined text-lg">file_download</span>匯出 CSV
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Metrics -->
+  <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+    <div class="bg-surface-container rounded-[2rem] p-8 group transition-all duration-500 hover:bg-surface-container-high relative overflow-hidden">
+      <div class="relative z-10">
+        <div class="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-primary">local_gas_station</span>
+        </div>
+        <p class="text-[10px] uppercase tracking-[0.2em] font-medium text-zinc-500 mb-1">加油次數</p>
+        <h3 class="text-4xl font-bold tracking-tight text-white" id="m-count">—</h3>
+        <div class="mt-4 flex items-center gap-1 text-emerald-400 text-xs font-medium">
+          <span class="material-symbols-outlined text-sm">trending_up</span>
+          <span>2025–2026 完整紀錄</span>
+        </div>
+      </div>
+      <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+        <span class="material-symbols-outlined text-9xl">local_gas_station</span>
+      </div>
+    </div>
+    <div class="bg-surface-container rounded-[2rem] p-8 group transition-all duration-500 hover:bg-surface-container-high relative overflow-hidden">
+      <div class="relative z-10">
+        <div class="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-primary">water_drop</span>
+        </div>
+        <p class="text-[10px] uppercase tracking-[0.2em] font-medium text-zinc-500 mb-1">總加油量</p>
+        <h3 class="text-4xl font-bold tracking-tight text-white" id="m-liters">—</h3>
+        <div class="mt-4 flex items-center gap-1 text-zinc-500 text-xs font-medium">
+          <span class="material-symbols-outlined text-sm">remove</span>
+          <span>累積消耗總計</span>
+        </div>
+      </div>
+      <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+        <span class="material-symbols-outlined text-9xl">water_drop</span>
+      </div>
+    </div>
+    <div class="bg-surface-container rounded-[2rem] p-8 group transition-all duration-500 hover:bg-surface-container-high relative overflow-hidden">
+      <div class="relative z-10">
+        <div class="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-primary">speed</span>
+        </div>
+        <p class="text-[10px] uppercase tracking-[0.2em] font-medium text-zinc-500 mb-1">平均油耗</p>
+        <h3 class="text-4xl font-bold tracking-tight text-white" id="m-avg">—</h3>
+        <div class="mt-4 flex items-center gap-1 text-emerald-400 text-xs font-medium">
+          <span class="material-symbols-outlined text-sm">trending_up</span>
+          <span>效率穩定提升中</span>
+        </div>
+      </div>
+      <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+        <span class="material-symbols-outlined text-9xl">speed</span>
+      </div>
+    </div>
+    <div class="bg-surface-container rounded-[2rem] p-8 group transition-all duration-500 hover:bg-surface-container-high relative overflow-hidden">
+      <div class="relative z-10">
+        <div class="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+          <span class="material-symbols-outlined text-primary">payments</span>
+        </div>
+        <p class="text-[10px] uppercase tracking-[0.2em] font-medium text-zinc-500 mb-1">總加油費</p>
+        <h3 class="text-4xl font-bold tracking-tight text-white" id="m-cost">—</h3>
+        <div class="mt-4 flex items-center gap-1 text-rose-400 text-xs font-medium">
+          <span class="material-symbols-outlined text-sm">trending_up</span>
+          <span>歷史總支出紀錄</span>
+        </div>
+      </div>
+      <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+        <span class="material-symbols-outlined text-9xl">payments</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+    <!-- Left: Charts -->
+    <div class="lg:col-span-2 space-y-12">
+
+      <!-- Efficiency Trend -->
+      <div class="bg-surface-container rounded-[2.5rem] p-10">
+        <div class="flex justify-between items-center mb-8">
+          <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white mb-1">油耗趨勢 (km/L)</h2>
+            <p class="text-zinc-500 text-sm">依每次加油里程差計算實際油耗</p>
+          </div>
+          <div class="flex bg-surface-container-low p-1 rounded-xl gap-1">
+            <button onclick="setChartFilter('all')" id="btn-all" class="px-4 py-1.5 text-xs font-bold text-white bg-surface-container-high rounded-lg shadow-sm">全部</button>
+            <button onclick="setChartFilter('2025')" id="btn-2025" class="px-4 py-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-300">2025</button>
+            <button onclick="setChartFilter('2026')" id="btn-2026" class="px-4 py-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-300">2026</button>
+          </div>
+        </div>
+        <div class="h-64 w-full relative">
+          <canvas id="effChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Bar Charts Row -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="bg-surface-container rounded-[2rem] p-8">
+          <h4 class="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6">每月加油費 (TWD)</h4>
+          <div class="h-40 relative">
+            <canvas id="monthCostChart"></canvas>
+          </div>
+        </div>
+        <div class="bg-surface-container rounded-[2rem] p-8">
+          <h4 class="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-6">每月加油量 (L)</h4>
+          <div class="h-40 relative">
+            <canvas id="monthLiterChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Vehicle Info + Recent Logs -->
+    <div class="space-y-8">
+      <!-- Vehicle Card -->
+      <div class="bg-surface-container rounded-[2rem] p-8 border border-outline-variant/10 shadow-xl">
+        <div class="flex items-center gap-4 mb-8">
+          <div class="h-16 w-16 rounded-2xl bg-zinc-800 flex items-center justify-center p-2">
+            <span class="material-symbols-outlined text-4xl text-zinc-400">directions_car</span>
+          </div>
+          <div>
+            <h4 class="text-lg font-bold text-white">Peugeot 408</h4>
+            <p class="text-zinc-500 text-xs">目前里程：<span id="v-odo" class="text-white font-bold">—</span> km</p>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-zinc-500">calendar_today</span>
+              <span class="text-sm font-medium">最近加油</span>
+            </div>
+            <span class="text-sm font-bold text-white" id="v-last">—</span>
+          </div>
+          <div class="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-zinc-500">local_gas_station</span>
+              <span class="text-sm font-medium">最近加油量</span>
+            </div>
+            <span class="text-sm font-bold text-white" id="v-lastl">—</span>
+          </div>
+          <div class="flex items-center justify-between p-4 bg-surface-container-low rounded-2xl">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-zinc-500">speed</span>
+              <span class="text-sm font-medium">最近油耗</span>
+            </div>
+            <span class="text-sm font-bold text-emerald-400" id="v-lastmpg">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Logs -->
+      <div class="bg-surface-container rounded-[2rem] overflow-hidden">
+        <div class="px-8 pt-8 pb-4">
+          <h4 class="text-sm font-bold uppercase tracking-widest text-zinc-500">最近紀錄</h4>
+        </div>
+        <div id="recentLogs" class="divide-y divide-zinc-800/50"></div>
+        <button onclick="document.getElementById('activity-section').scrollIntoView({behavior:'smooth'})" class="w-full py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all">
+          查看所有日誌
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Log Table -->
+  <section class="mt-20" id="activity-section">
+    <div class="flex items-center justify-between mb-8 px-2 flex-wrap gap-4">
+      <h3 class="text-3xl font-extrabold tracking-tight text-white">活動日誌</h3>
+      <div class="flex gap-4 flex-wrap">
+        <select id="filterYear" onchange="renderTable()" class="bg-surface-container border-none rounded-xl text-xs font-bold text-zinc-400 focus:ring-0 px-4 py-2">
+          <option value="">所有年份</option>
+          <option>2025</option>
+          <option>2026</option>
+        </select>
+        <select id="filterMonth" onchange="renderTable()" class="bg-surface-container border-none rounded-xl text-xs font-bold text-zinc-400 focus:ring-0 px-4 py-2">
+          <option value="">所有月份</option>
+          <option value="01">一月</option><option value="02">二月</option><option value="03">三月</option>
+          <option value="04">四月</option><option value="05">五月</option><option value="06">六月</option>
+          <option value="07">七月</option><option value="08">八月</option><option value="09">九月</option>
+          <option value="10">十月</option><option value="11">十一月</option><option value="12">十二月</option>
+        </select>
+      </div>
+    </div>
+    <div class="bg-surface-container rounded-[2.5rem] overflow-hidden shadow-2xl">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-surface-container-high/50">
+          <tr>
+            <th class="px-8 py-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">日期</th>
+            <th class="px-8 py-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">里程</th>
+            <th class="px-8 py-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">油量</th>
+            <th class="px-8 py-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">距上次(km)</th>
+            <th class="px-8 py-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">效率(km/L)</th>
+            <th class="px-8 py-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">總額</th>
+            <th class="px-8 py-6 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">操作</th>
+          </tr>
+        </thead>
+        <tbody id="logTable" class="divide-y divide-zinc-800/30"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="bg-zinc-950 w-full py-12 px-8 mt-auto border-t border-zinc-800/30">
+  <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+    <span class="text-[10px] uppercase tracking-[0.2em] font-medium text-zinc-400">© 2025–2026 Peugeot 408 油耗儀表板</span>
+  </div>
+</footer>
+
+<!-- FAB -->
+<button onclick="openModal()" class="md:hidden fixed bottom-8 right-8 w-16 h-16 bg-white text-black rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform z-40">
+  <span class="material-symbols-outlined text-3xl">add</span>
+</button>
+
+<!-- Add/Edit Modal -->
+<div id="modal-overlay" class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center hidden" onclick="if(event.target===this)closeModal()">
+  <div class="bg-surface-container-high rounded-[2rem] p-8 w-full max-w-lg mx-4 shadow-2xl" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-xl font-bold text-white" id="modal-title">新增加油紀錄</h3>
+      <button onclick="closeModal()" class="material-symbols-outlined text-zinc-500 hover:text-white transition-colors">close</button>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="text-[10px] uppercase tracking-widest text-zinc-500 block mb-2">日期</label>
+        <input type="date" id="m-date" oninput="calcModal()" class="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-white focus:ring-0 focus:border-white/30"/>
+      </div>
+      <div>
+        <label class="text-[10px] uppercase tracking-widest text-zinc-500 block mb-2">加油量 (L)</label>
+        <input type="number" id="m-liters-in" step="0.001" min="0" placeholder="例：38.5" oninput="calcModal()" class="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-white focus:ring-0 focus:border-white/30"/>
+      </div>
+      <div>
+        <label class="text-[10px] uppercase tracking-widest text-zinc-500 block mb-2">油價 (TWD/L)</label>
+        <input type="number" id="m-price" step="0.1" min="0" placeholder="例：30.4" oninput="calcModal()" class="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-white focus:ring-0 focus:border-white/30"/>
+      </div>
+      <div>
+        <label class="text-[10px] uppercase tracking-widest text-zinc-500 block mb-2">加油金額 (TWD)</label>
+        <input type="number" id="m-amount" step="1" placeholder="自動計算" class="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-white focus:ring-0 focus:border-white/30"/>
+      </div>
+      <div class="col-span-2">
+        <label class="text-[10px] uppercase tracking-widest text-zinc-500 block mb-2">里程 (km)</label>
+        <input type="number" id="m-odo" min="0" placeholder="例：24050" oninput="calcModal()" class="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-white focus:ring-0 focus:border-white/30"/>
+      </div>
+    </div>
+    <div id="modal-preview" class="hidden mb-6 p-4 bg-surface-container-low rounded-2xl grid grid-cols-3 gap-4">
+      <div><p class="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">預計金額</p><p class="text-white font-bold text-sm" id="mp-amount">—</p></div>
+      <div><p class="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">距上次</p><p class="text-white font-bold text-sm" id="mp-since">—</p></div>
+      <div><p class="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">估算油耗</p><p class="text-emerald-400 font-bold text-sm" id="mp-mpg">—</p></div>
+    </div>
+    <input type="hidden" id="m-edit-id"/>
+    <div class="flex gap-4">
+      <button onclick="saveModal()" class="flex-1 bg-primary text-on-primary py-3 rounded-xl font-bold hover:opacity-90 transition-all active:scale-95">儲存</button>
+      <button onclick="closeModal()" class="px-6 py-3 rounded-xl font-bold text-zinc-500 hover:text-white bg-surface-container-low transition-all">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white px-6 py-3 rounded-full text-sm font-bold shadow-2xl opacity-0 pointer-events-none transition-opacity z-50"></div>
+
+<script>
+// ── 資料 ─────────────────────────────────────────────────────────
+const SEED = [
+  ['2025-06-28', 45.000,     5, 1278],
+  ['2025-07-01', 37.940,   480, 1070],
+  ['2025-07-05', 39.904,   813, 1010],
+  ['2025-07-08', 41.140,  1417, 1168],
+  ['2025-07-14', 43.354,  1917, 1192],
+  ['2025-07-23', 40.430,  2452, 1112],
+  ['2025-07-27', 40.520,  2974, 1114],
+  ['2025-08-02', 26.465,  3323,  670],
+  ['2025-08-07', 38.450,  3825, 1068],
+  ['2025-08-09', 40.890,  4439, 1169],
+  ['2025-08-12', 33.730,  4971,  951],
+  ['2025-08-16', 28.580,  5372,  729],
+  ['2025-08-18', 35.050,  5900,  978],
+  ['2025-08-23', 40.800,  6465, 1138],
+  ['2025-08-28', 10.540,  6951,  304],
+  ['2025-08-30',  6.040,  7051,  174],
+  ['2025-08-30', 41.018,  7151, 1116],
+  ['2025-09-03', 39.570,  7713, 1191],
+  ['2025-09-08', 43.940,  8290, 1270],
+  ['2025-09-13', 43.873,  8892, 1136],
+  ['2025-09-17', 41.930,  9434, 1208],
+  ['2025-09-24', 40.550, 10002, 1164],
+  ['2025-10-01', 39.850, 10504, 1144],
+  ['2025-10-06', 39.630, 10934, 1137],
+  ['2025-10-17', 42.360, 11491, 1207],
+  ['2025-10-24', 35.660, 12004,  998],
+  ['2025-10-26', 28.260, 12468,  791],
+  ['2025-10-29', 37.230, 13014, 1061],
+  ['2025-11-03', 35.360, 13585, 1142],
+  ['2025-11-08', 35.900, 14131, 1034],
+  ['2025-11-15', 35.450, 14674, 1014],
+  ['2025-11-22', 28.900, 15138,  827],
+  ['2025-11-29', 36.840, 15718, 1054],
+  ['2025-12-06', 34.500, 16259,  987],
+  ['2025-12-14', 33.868, 16801,  972],
+  ['2025-12-20', 35.931, 17423,  913],
+  ['2025-12-28', 33.370, 17938,  931],
+  ['2026-01-03', 23.570, 18270,  667],
+  ['2026-01-11', 38.480, 18901, 1051],
+  ['2026-01-24', 37.670, 19444, 1051],
+  ['2026-01-31', 37.140, 20052, 1062],
+  ['2026-02-07', 36.418, 20611,  947],
+  ['2026-02-15', 44.700, 21292, 1283],
+  ['2026-02-23', 46.230, 21895, 1327],
+  ['2026-03-02', 36.490, 22412, 1055],
+  ['2026-03-08', 36.100, 22983, 1043],
+  ['2026-03-20', 41.070, 23605, 1207],
+  ['2026-03-22', 17.510, 23904,  532],
+];
+
+const LS = 'peugeot_408_v1';
+let records = [];
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS));
+    if (s && s.length) { records = s; return; }
+  } catch(e) {}
+  records = SEED.map(([date, liters, odometer, amount], i) => ({ id: 's'+i, date, liters, odometer, amount }));
+  save();
+}
+function save() { try { localStorage.setItem(LS, JSON.stringify(records)); } catch(e) {} }
+load();
+
+function sorted() {
+  const all = [...records].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return (a.odometer||0) - (b.odometer||0);
+  });
+  all.forEach((r, i) => {
+    r.distSince = null; r.mpg = null;
+    if (i > 0) {
+      const p = all[i-1];
+      if (r.odometer && p.odometer && r.odometer > p.odometer) {
+        r.distSince = r.odometer - p.odometer;
+        r.mpg = r.distSince / r.liters;
+      }
+    }
+  });
+  return all;
+}
+
+// ── 指標 ─────────────────────────────────────────────────────────
+function updateMetrics() {
+  const s = sorted();
+  const n = s.length;
+  const totalL = s.reduce((a,r) => a+r.liters, 0);
+  const totalCost = s.reduce((a,r) => a+r.amount, 0);
+  const mpgList = s.filter(r => r.mpg !== null);
+  const avg = mpgList.length ? mpgList.reduce((a,r) => a+r.mpg, 0)/mpgList.length : 0;
+  const last = [...s].sort((a,b) => b.date.localeCompare(a.date))[0];
+
+  document.getElementById('m-count').textContent = n;
+  document.getElementById('m-liters').innerHTML = totalL.toFixed(1)+'<span class="text-lg text-zinc-500 ml-1">L</span>';
+  document.getElementById('m-avg').innerHTML = avg.toFixed(1)+'<span class="text-lg text-zinc-500 ml-1">km/L</span>';
+  document.getElementById('m-cost').textContent = 'NT$ '+Math.round(totalCost).toLocaleString();
+
+  if (last) {
+    document.getElementById('v-odo').textContent = last.odometer ? last.odometer.toLocaleString() : '—';
+    document.getElementById('v-last').textContent = last.date;
+    document.getElementById('v-lastl').textContent = last.liters.toFixed(2)+' L';
+    document.getElementById('v-lastmpg').textContent = last.mpg ? last.mpg.toFixed(1)+' km/L' : '—';
+  }
+
+  // Recent logs (top 4)
+  const recent = [...s].sort((a,b) => b.date.localeCompare(a.date)).slice(0,4);
+  document.getElementById('recentLogs').innerHTML = recent.map(r => `
+    <div class="px-8 py-5 hover:bg-surface-container-high transition-colors flex justify-between items-center">
+      <div>
+        <p class="text-sm font-bold text-white mb-0.5">${r.date}</p>
+        <p class="text-[10px] text-zinc-500 font-medium">${r.liters.toFixed(2)} L・${r.odometer ? r.odometer.toLocaleString()+' km' : '—'}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-bold text-white mb-0.5">NT$ ${r.amount.toLocaleString()}</p>
+        <p class="text-[10px] font-bold ${r.mpg ? (r.mpg>=13?'text-emerald-500':r.mpg>=10?'text-yellow-500':'text-rose-500') : 'text-zinc-500'}">
+          ${r.mpg ? r.mpg.toFixed(1)+' km/L' : '—'}
+        </p>
+      </div>
+    </div>`).join('');
+}
+
+// ── 圖表 ─────────────────────────────────────────────────────────
+let effChart, monthCostChart, monthLiterChart;
+let chartFilter = 'all';
+
+function setChartFilter(f) {
+  chartFilter = f;
+  ['all','2025','2026'].forEach(k => {
+    const el = document.getElementById('btn-'+k);
+    if (el) el.className = `px-4 py-1.5 text-xs font-bold rounded-lg ${k===f ? 'text-white bg-surface-container-high shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`;
+  });
+  buildEffChart();
+}
+
+function buildEffChart() {
+  const s = sorted().filter(r => r.mpg !== null && (chartFilter==='all' || r.date.startsWith(chartFilter)));
+  const labels = s.map(r => r.date.slice(5));
+  const vals   = s.map(r => +r.mpg.toFixed(2));
+  if (effChart) effChart.destroy();
+  effChart = new Chart(document.getElementById('effChart'), {
+    type: 'line',
+    data: { labels, datasets: [{ data: vals, borderColor: '#ffffff', backgroundColor: 'rgba(255,255,255,0.05)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#ffffff', borderWidth: 2 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#52525b', font: { size: 10 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,0.03)' } },
+        y: { ticks: { color: '#52525b', font: { size: 10 }, callback: v => v+'km/L' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+function buildMonthCharts() {
+  const s = sorted();
+  const map = {};
+  s.forEach(r => {
+    const k = r.date.slice(0,7);
+    if (!map[k]) map[k] = { cost: 0, liters: 0 };
+    map[k].cost += r.amount;
+    map[k].liters += r.liters;
+  });
+  const entries = Object.entries(map).sort((a,b) => a[0].localeCompare(b[0]));
+  const labels = entries.map(([k]) => k.slice(2));
+  const costs  = entries.map(([,v]) => Math.round(v.cost));
+  const liters = entries.map(([,v]) => +v.liters.toFixed(1));
+
+  if (monthCostChart) monthCostChart.destroy();
+  monthCostChart = new Chart(document.getElementById('monthCostChart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: costs, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#52525b',font:{size:9},maxRotation:45},grid:{display:false}}, y:{ticks:{color:'#52525b',font:{size:9},callback:v=>'$'+v},grid:{color:'rgba(255,255,255,0.04)'}} } }
+  });
+
+  if (monthLiterChart) monthLiterChart.destroy();
+  monthLiterChart = new Chart(document.getElementById('monthLiterChart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: liters, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#52525b',font:{size:9},maxRotation:45},grid:{display:false}}, y:{ticks:{color:'#52525b',font:{size:9},callback:v=>v+'L'},grid:{color:'rgba(255,255,255,0.04)'}} } }
+  });
+}
+
+// ── 表格 ─────────────────────────────────────────────────────────
+function renderTable() {
+  const yr = document.getElementById('filterYear').value;
+  const mo = document.getElementById('filterMonth').value;
+  const q  = (document.getElementById('searchInput').value||'').toLowerCase();
+  const s  = sorted().filter(r =>
+    (!yr || r.date.startsWith(yr)) &&
+    (!mo || r.date.slice(5,7)===mo) &&
+    (!q  || r.date.includes(q) || String(r.odometer||'').includes(q) || String(r.amount).includes(q))
+  ).sort((a,b) => b.date.localeCompare(a.date));
+
+  const mpgColor = v => v >= 13 ? 'bg-emerald-500/10 text-emerald-400' : v >= 10 ? 'bg-yellow-500/10 text-yellow-400' : 'bg-rose-500/10 text-rose-400';
+  const fmtDate = d => {
+    const [y,m,day] = d.split('-');
+    return `${y}年${parseInt(m)}月${parseInt(day)}日`;
+  };
+
+  document.getElementById('logTable').innerHTML = s.map(r => `
+    <tr class="hover:bg-surface-container-high transition-colors">
+      <td class="px-8 py-5 text-sm font-medium text-white">${fmtDate(r.date)}</td>
+      <td class="px-8 py-5 text-sm font-medium text-zinc-400">${r.odometer ? r.odometer.toLocaleString()+' km' : '—'}</td>
+      <td class="px-8 py-5 text-sm font-bold text-white">${r.liters.toFixed(3)} L</td>
+      <td class="px-8 py-5 text-sm text-zinc-400">${r.distSince !== null ? r.distSince.toLocaleString()+' km' : '—'}</td>
+      <td class="px-8 py-5">${r.mpg !== null ? `<span class="px-3 py-1 rounded-full text-[10px] font-bold ${mpgColor(r.mpg)}">${r.mpg.toFixed(1)}</span>` : '<span class="text-zinc-600">—</span>'}</td>
+      <td class="px-8 py-5 text-sm font-bold text-white">NT$ ${r.amount.toLocaleString()}</td>
+      <td class="px-8 py-5">
+        <div class="flex gap-2">
+          <button onclick="openModal('${r.id}')" class="material-symbols-outlined text-zinc-600 hover:text-white transition-colors text-base">edit</button>
+          <button onclick="deleteRecord('${r.id}')" class="material-symbols-outlined text-zinc-600 hover:text-rose-400 transition-colors text-base">delete</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+// ── Modal ─────────────────────────────────────────────────────────
+function openModal(id) {
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.remove('hidden');
+  document.getElementById('m-edit-id').value = id || '';
+  if (id) {
+    const r = records.find(x => x.id === id);
+    document.getElementById('modal-title').textContent = '修改加油紀錄';
+    document.getElementById('m-date').value = r.date;
+    document.getElementById('m-liters-in').value = r.liters;
+    document.getElementById('m-price').value = r.liters > 0 ? (r.amount/r.liters).toFixed(1) : '';
+    document.getElementById('m-amount').value = r.amount;
+    document.getElementById('m-odo').value = r.odometer || '';
+  } else {
+    document.getElementById('modal-title').textContent = '新增加油紀錄';
+    document.getElementById('m-date').value = new Date().toISOString().slice(0,10);
+    ['m-liters-in','m-price','m-amount','m-odo'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('modal-preview').classList.add('hidden');
+  }
+  calcModal();
+}
+function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
+
+function calcModal() {
+  const l      = parseFloat(document.getElementById('m-liters-in').value);
+  const p      = parseFloat(document.getElementById('m-price').value);
+  const odo    = parseFloat(document.getElementById('m-odo').value);
+  const date   = document.getElementById('m-date').value;
+  const editId = document.getElementById('m-edit-id').value;
+  const preview = document.getElementById('modal-preview');
+
+  if (!isNaN(l) && l > 0) {
+    if (!isNaN(p)) {
+      document.getElementById('m-amount').value = Math.round(l * p);
+    }
+    const amt = parseFloat(document.getElementById('m-amount').value);
+    document.getElementById('mp-amount').textContent = isNaN(amt) ? '—' : 'NT$ ' + Math.round(amt).toLocaleString();
+
+    if (!isNaN(odo) && date) {
+      const others = sorted().filter(r =>
+        r.id !== editId &&
+        r.odometer &&
+        (r.date < date || (r.date === date && r.odometer < odo))
+      );
+      const prevOdo = others.length ? others[others.length - 1].odometer : null;
+      if (prevOdo && odo > prevOdo) {
+        const diff = odo - prevOdo;
+        document.getElementById('mp-since').textContent = diff.toLocaleString() + ' km';
+        document.getElementById('mp-mpg').textContent   = (diff / l).toFixed(1) + ' km/L';
+      } else {
+        document.getElementById('mp-since').textContent = '—';
+        document.getElementById('mp-mpg').textContent   = '—';
+      }
+    } else {
+      document.getElementById('mp-since').textContent = '—';
+      document.getElementById('mp-mpg').textContent   = '—';
+    }
+
+    preview.style.display = 'grid';
+    preview.classList.remove('hidden');
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+function saveModal() {
+  const date   = document.getElementById('m-date').value;
+  const liters = parseFloat(document.getElementById('m-liters-in').value);
+  const amount = parseFloat(document.getElementById('m-amount').value);
+  const odo    = parseFloat(document.getElementById('m-odo').value);
+  const editId = document.getElementById('m-edit-id').value;
+  if (!date || isNaN(liters) || isNaN(amount)) { toast('請填寫日期、加油量和金額'); return; }
+
+  if (editId) {
+    const idx = records.findIndex(r => r.id === editId);
+    if (idx >= 0) records[idx] = { ...records[idx], date, liters, amount, odometer: isNaN(odo) ? null : odo };
+    toast('已修改');
+  } else {
+    records.push({ id: 'u'+Date.now(), date, liters, amount, odometer: isNaN(odo) ? null : odo });
+    toast('已新增');
+  }
+  save(); closeModal(); refresh();
+}
+
+function deleteRecord(id) {
+  const r = records.find(x => x.id === id);
+  if (!r || !confirm(`確定刪除 ${r.date}・${r.liters}L 這筆紀錄？`)) return;
+  records = records.filter(x => x.id !== id);
+  save(); refresh(); toast('已刪除');
+}
+
+// ── 匯出 ─────────────────────────────────────────────────────────
+function exportCSV() {
+  const s = sorted();
+  const header = ['日期','加油量(L)','加油金額(TWD)','油價(TWD/L)','里程(km)','距上次(km)','油耗(km/L)'];
+  const rows = s.map(r => [
+    r.date, r.liters.toFixed(3), r.amount,
+    r.liters > 0 ? (r.amount/r.liters).toFixed(2) : '',
+    r.odometer || '', r.distSince ?? '', r.mpg !== null ? r.mpg.toFixed(2) : ''
+  ]);
+  const csv = '\uFEFF' + [header,...rows].map(row => row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+  a.download = `peugeot408_fuel_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  toast('CSV 已下載');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.opacity = '1';
+  setTimeout(() => el.style.opacity = '0', 2000);
+}
+
+function refresh() {
+  updateMetrics();
+  buildEffChart();
+  buildMonthCharts();
+  renderTable();
+}
+
+refresh();
+</script>
+</body>
+</html>
